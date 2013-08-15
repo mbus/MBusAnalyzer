@@ -97,10 +97,12 @@ void MBusAnalyzer::Process_IdleToArbitration() {
 	// Advance LastNodeCLK channel to end of t_long
 	mLastNodeCLK->AdvanceToNextEdge();
 
-	bool requested[ mNodeDATs.size() ];
+	// VS2012 doesn't support non-constants for array length, annoying but w/e
+	{ // Put into a scope so we don't do anything foolish
+	bool *requested = new bool[ mNodeDATs.size() ];
 	for (int i=0; i < mNodeDATs.size(); i++) requested[i] = false;
 
-	U64  DOUT_Fall[ mNodeDATs.size() ];
+	U64  *DOUT_Fall = new U64[ mNodeDATs.size() ];
 
 	// First find the sample number when each node's DOUT falls
 	for (int i=0; i < mNodeDATs.size(); i++) {
@@ -138,6 +140,11 @@ void MBusAnalyzer::Process_IdleToArbitration() {
 	}
 	frame.mData2 = 1;
 	frame.mType = FrameTypeRequest;
+
+	// Cleanup after VS2012 fix
+	delete[] requested;
+	delete[] DOUT_Fall;
+	} // end VS2012 scope
 
 	if (requestBugWorkaround) {
 		frame.mFlags |= REQUEST_BUG_WORKAROUND;
