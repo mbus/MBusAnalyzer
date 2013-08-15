@@ -53,6 +53,7 @@ private: // analysis helpers:
 	std::vector< AnalyzerChannelData * > mNodeDATs;
 
 	int mTransmitter;
+	bool requestBugWorkaround;
 };
 
 extern "C" ANALYZER_EXPORT const char* __cdecl GetAnalyzerName();

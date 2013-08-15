@@ -7,6 +7,7 @@ MBusAnalyzer::MBusAnalyzer()
 	mSettings( new MBusAnalyzerSettings() ),
 	mSimulationInitilized( false )
 {
+	requestBugWorkaround = false;
 	SetAnalyzerSettings( mSettings.get() );
 }
 
@@ -137,6 +138,12 @@ void MBusAnalyzer::Process_IdleToArbitration() {
 	}
 	frame.mData2 = 1;
 	frame.mType = FrameTypeRequest;
+
+	if (requestBugWorkaround) {
+		frame.mFlags |= REQUEST_BUG_WORKAROUND;
+	} else {
+		requestBugWorkaround = true;
+	}
 
 	frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
 	mResults->AddFrame(frame);

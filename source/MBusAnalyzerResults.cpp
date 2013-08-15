@@ -34,12 +34,17 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 
 	switch( frame.mType ) {
 		case FrameTypeRequest:
-			if (data) {
-				AddResultString("Req");
-				AddResultString("Requested");
+			if (frame.mFlags & REQUEST_BUG_WORKAROUND) {
+				AddResultString("...");
+				AddResultString("Request Phase");
 			} else {
-				AddResultString("!Req");
-				AddResultString("Did not Request");
+				if (data) {
+					AddResultString("Req");
+					AddResultString("Requested");
+				} else {
+					AddResultString("!Req");
+					AddResultString("Did not Request");
+				}
 			}
 			break;
 		case FrameTypeArbitration:
