@@ -103,12 +103,10 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			mCB0 = data;
 			if (data) {
 				AddResultString("EoM");
-				AddResultString("CB0: EoM");
-				AddResultString("CB0: End of Message");
+				AddResultString("End of Message");
 				AddResultString("Control Bit 0: End of Message");
 			} else {
 				AddResultString("Err");
-				AddResultString("CB0: Err");
 				AddResultString("Control Bit 0: General Error");
 			}
 			break;
@@ -116,23 +114,19 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			if (mCB0) {
 				if (data) {
 					AddResultString("Nak");
-					AddResultString("CB1: Nak");
 					AddResultString("Control Bit 1: Nak");
 				} else {
 					AddResultString("Ack");
-					AddResultString("CB1: Ack");
 					AddResultString("Control Bit 1: Ack");
 				}
 			} else {
 				if (data) {
 					AddResultString("TX,RX Err");
-					AddResultString("CB1: TX,RX Err");
-					AddResultString("CB1: TX or RX Node Error");
+					AddResultString("TX or RX Node Error");
 					AddResultString("Control Bit 1: TX or RX Node Error");
 				} else {
 					AddResultString("Int");
-					AddResultString("CB1: Int");
-					AddResultString("CB1: Interrupted");
+					AddResultString("Interrupted");
 					AddResultString("Control Bit 1: Interrupted");
 				}
 			}
