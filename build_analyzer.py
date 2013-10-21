@@ -4,8 +4,10 @@ import os, glob, platform
 dylib_ext = ""
 if platform.system().lower() == "darwin":
     dylib_ext = ".dylib"
+    cc = "clang"
 else:
     dylib_ext = ".so"
+    cc = "g++"
     
 print "Running on " + platform.system()
 
@@ -49,7 +51,7 @@ release_compile_flags = "-O3 -w -c -fpic -std=c++11"
 for cpp_file in cpp_files:
 
     #g++
-    command = "clang "
+    command = cc + " "
 
     #include paths
     for path in include_paths: 
@@ -73,7 +75,7 @@ for cpp_file in cpp_files:
     
 #lastly, link
 #g++
-command = "g++ "
+command = cc + " "
 
 #add the library search paths
 for link_path in link_paths:
