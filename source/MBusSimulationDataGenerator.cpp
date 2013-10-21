@@ -3,6 +3,7 @@
 
 #include <AnalyzerHelpers.h>
 
+#include <cstdlib>
 #include <algorithm> // std::random_shuffle
 
 MBusSimulationDataGenerator::MBusSimulationDataGenerator()

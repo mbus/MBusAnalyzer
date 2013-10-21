@@ -4,11 +4,15 @@ import os, glob, platform
 dylib_ext = ""
 if platform.system().lower() == "darwin":
     dylib_ext = ".dylib"
-    cc = "clang"
+    cc = "clang++"
+    debug_compile_flags = "-O0 -w -c -arch i386 -fpic -g -std=c++11 -stdlib=libc++"
+    release_compile_flags = "-O3 -w -c -arch i386 -fpic -std=c++11 -stdlib=libc++"
 else:
     dylib_ext = ".so"
     cc = "g++"
-    
+    debug_compile_flags = "-O0 -w -c -fpic -g -std=c++11"
+    release_compile_flags = "-O3 -w -c -fpic -std=c++11"
+
 print "Running on " + platform.system()
 
 #make sure the release folder exists, and clean out any .o/.so file if there are any
@@ -43,9 +47,6 @@ os.chdir( ".." )
 include_paths = [ "../include" ]
 link_paths = [ "../lib" ]
 link_dependencies = [ "-lAnalyzer" ] #refers to libAnalyzer.dylib or libAnalyzer.so
-
-debug_compile_flags = "-O0 -w -c -fpic -g -std=c++11"
-release_compile_flags = "-O3 -w -c -fpic -std=c++11"
 
 #loop through all the cpp files, build up the gcc command line, and attempt to compile each cpp file
 for cpp_file in cpp_files:
@@ -89,6 +90,7 @@ for link_dependency in link_dependencies:
 
 if dylib_ext == ".dylib":
     command += "-dynamiclib "
+    command += "-arch i386 -stdlib=libc++ "
 else:
     command += "-shared "
 
