@@ -297,10 +297,10 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 		frame.mFlags = 0;
 		frame.mStartingSampleInclusive = mLastNodeCLK->GetSampleNumber()+1;
 
-		U32 data = 0;
+		U8 data = 0;
 
-		for (int i=0; i < 31; i++) {
-			// Latch Drive Bit N (Data is MSB, currently assume words)
+		for (int i=0; i < 7; i++) {
+			// Latch Drive Bit N (Data is MSB, byte-granularity)
 			mLastNodeCLK->AdvanceToNextEdge();
 			AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 			data <<= 1;
@@ -309,7 +309,7 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 			mLastNodeCLK->AdvanceToNextEdge();
 			AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 		}
-		// Latch Drive Bit 32
+		// Latch Drive Bit 8
 		mLastNodeCLK->AdvanceToNextEdge();
 		AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 		data <<= 1;

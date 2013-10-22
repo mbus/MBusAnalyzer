@@ -56,8 +56,8 @@ U32 MBusSimulationDataGenerator::GenerateSimulationData( U64 largest_sample_requ
 		data[4] = 0x87; data[5] = 0x65; data[6] = 0x43; data[7] = 0x21;
 		CreateMBusTransaction(0, 0xC3, 8, data, false);
 		CreateMBusTransaction(0, 0xF00000D4, 8, data, false);
-		//data[4] = 0x9A; data[5] = 0xBC;
-		//CreateMBusTransaction(0, 0xE5, 6, data, false);
+		data[4] = 0x9A; data[5] = 0xBC;
+		CreateMBusTransaction(0, 0xE5, 6, data, false);
 	}
 
 	*simulation_channel = mMBusSimulationChannels.GetArray();

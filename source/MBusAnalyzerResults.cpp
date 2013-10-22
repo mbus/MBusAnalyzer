@@ -102,7 +102,7 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 		case FrameTypeData:
 			{
 				char number_str[64];
-				AnalyzerHelpers::GetNumberString(data, display_base, 32, number_str, 64);
+				AnalyzerHelpers::GetNumberString(data, display_base, 8, number_str, 64);
 
 				AddResultString(number_str);
 				AddResultString("Data: ", number_str);
