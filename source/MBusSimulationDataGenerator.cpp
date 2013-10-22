@@ -49,8 +49,15 @@ U32 MBusSimulationDataGenerator::GenerateSimulationData( U64 largest_sample_requ
 
 	while( minSampleNumber() < adjusted_largest_sample_requested )
 	{
-		CreateMBusTransaction(0, 0xA5, 0x12345678, false);
-		CreateMBusTransaction(0, 0xF00000C2, 0x12345678, false);
+		U8 data[256];
+		data[0] = 0x12; data[1] = 0x34; data[2] = 0x56; data[3] = 0x78;
+		CreateMBusTransaction(0, 0xA1, 4, data, false);
+		CreateMBusTransaction(0, 0xF00000B2, 4, data, false);
+		data[4] = 0x87; data[5] = 0x65; data[6] = 0x43; data[7] = 0x21;
+		CreateMBusTransaction(0, 0xC3, 8, data, false);
+		CreateMBusTransaction(0, 0xF00000D4, 8, data, false);
+		//data[4] = 0x9A; data[5] = 0xBC;
+		//CreateMBusTransaction(0, 0xE5, 6, data, false);
 	}
 
 	*simulation_channel = mMBusSimulationChannels.GetArray();
@@ -61,7 +68,7 @@ void MBusSimulationDataGenerator::PropogationDelay() {
 	mMBusSimulationChannels.AdvanceAll( std::rand() % 3 + 1 );
 }
 
-void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address, U32 data, bool acked) {
+void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address, U8 num_bytes, U8 data[], bool acked) {
 	static int num_calls = 0;
 	num_calls++;
 	for (int i=0; i < mNodeCount; i++) {
@@ -87,7 +94,7 @@ void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address,
 		}
 	}
 
-	CreateMBusData(sender, address, data); // Through last Data Bit latch inclusive
+	CreateMBusData(sender, address, num_bytes, data); // Through last Data Bit latch inclusive
 	for (int i=0; i<mNodeCount; i++)
 		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
 			AnalyzerHelpers::Assert("CreateMBusData did not exit with CLK's high?");
@@ -257,7 +264,7 @@ void MBusSimulationDataGenerator::CreateMBusBit(int sender, BitState bit) {
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 }
 
-void MBusSimulationDataGenerator::CreateMBusData(int sender, U32 address, U32 data) {
+void MBusSimulationDataGenerator::CreateMBusData(int sender, U32 address, U8 num_bytes, U8 data[]) {
 	if (address > 0xff) {
 		if ((address & 0xf0000000) != 0xf0000000) {
 			AnalyzerHelpers::Assert("If address is greater than 8 bits, the top 4 bits *must* be 0xf");
@@ -271,9 +278,11 @@ void MBusSimulationDataGenerator::CreateMBusData(int sender, U32 address, U32 da
 			CreateMBusBit(sender, addressBits.GetNextBit());
 	}
 
-	BitExtractor dataBits(data, AnalyzerEnums::MsbFirst, 32);
-	for (int i=0; i < 32; i++)
-		CreateMBusBit(sender, dataBits.GetNextBit());
+	for (int b=0; b < num_bytes; b++) {
+		BitExtractor dataBits(data[b], AnalyzerEnums::MsbFirst, 8);
+		for (int i=0; i < 8; i++)
+			CreateMBusBit(sender, dataBits.GetNextBit());
+	}
 }
 
 void MBusSimulationDataGenerator::CreateMBusInterrupt(int interrupter) {

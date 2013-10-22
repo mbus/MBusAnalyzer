@@ -28,9 +28,9 @@ protected:
 	int mNodeCount;
 
 private:
-	void CreateMBusTransaction(int sender, U32 address, U32 data, bool acked);
+	void CreateMBusTransaction(int sender, U32 address, U8 num_bytes, U8 data[], bool acked);
 	void CreateMBusArbitration(std::vector< bool > normal, std::vector< bool > priority);
-	void CreateMBusData(int sender, U32 address, U32 data);
+	void CreateMBusData(int sender, U32 address, U8 num_bytes, U8 data[]);
 	void CreateMBusBit(int sender, BitState bit);
 	void CreateMBusInterrupt(int interrupter);
 	void CreateMBusControl(int interrupter, BitState cb0, int target, BitState cb1);
