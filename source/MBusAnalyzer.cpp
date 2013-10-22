@@ -292,7 +292,6 @@ void MBusAnalyzer::Process_AddressToData() {
 		singleton = true;
 	}
 	outfile << "Address " << std::hex << address << std::endl;
-	std::cerr << "Address " << std::hex << address << std::endl;
 
 	frame.mData1 = address;
 	frame.mType = FrameTypeAddress;
