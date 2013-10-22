@@ -35,7 +35,7 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 	static bool singleton = false;
 	static std::ofstream outfile;
 	if (!singleton) {
-		outfile.open("MBus.out", std::ios::out | std::ios::trunc);
+		outfile.open("MBus_AnalyzerResults.out", std::ios::out | std::ios::trunc);
 		singleton = true;
 	}
 

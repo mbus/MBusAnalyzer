@@ -58,6 +58,16 @@ U32 MBusSimulationDataGenerator::GenerateSimulationData( U64 largest_sample_requ
 		CreateMBusTransaction(0, 0xF00000D4, 8, data, false);
 		data[4] = 0x9A; data[5] = 0xBC;
 		CreateMBusTransaction(0, 0xE5, 6, data, false);
+
+		// Imager messages: To address 0x17, 1 row / message
+		// 8 bits/column x 160 columns = 160 bytes / message
+		// There are 160 rows. Closes with a single 32-bit message
+		for (int i=0; i < 160; i++)
+			data[i] = i; //(255 - i*2) % 255;
+		for (int i=0; i < 160; i++)
+			CreateMBusTransaction(0, 0x17, 160, data, false);
+		data[0] = 0xa5; data[1] = 0xa5; data[2] = 0xa5; data[3] = 0xa5;
+		CreateMBusTransaction(0, 0x17, 4, data, false);
 	}
 
 	*simulation_channel = mMBusSimulationChannels.GetArray();
