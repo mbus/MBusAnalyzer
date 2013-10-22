@@ -32,6 +32,13 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 
 	U32 data = (frame.mData1 & (1ULL << (ChannelToIndex( channel ) + 32))) ? frame.mData2 : frame.mData1;
 
+	static bool singleton = false;
+	static std::ofstream outfile;
+	if (!singleton) {
+		outfile.open("MBus.out", std::ios::out | std::ios::trunc);
+		singleton = true;
+	}
+
 	switch( frame.mType ) {
 		case FrameTypeRequest:
 			if (frame.mFlags & REQUEST_BUG_WORKAROUND) {
@@ -88,6 +95,8 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 
 				AddResultString(prefix_str, " + ", fu_str);
 				AddResultString("Prefix: ", prefix_str, " F.U. Addr: ", fu_str);
+
+				outfile << "Prefix " << prefix_str << " FU_Addr " << fu_str << std::endl;
 			}
 			break;
 		case FrameTypeData:
@@ -97,6 +106,8 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 
 				AddResultString(number_str);
 				AddResultString("Data: ", number_str);
+
+				outfile << "Data " << number_str << std::endl;
 			}
 			break;
 		case FrameTypeControlBit0:
