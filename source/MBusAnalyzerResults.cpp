@@ -143,7 +143,7 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			}
 			break;
 		default:
-			AnalyzerHelpers::Assert("Internal Error: Unknown frame type in GenerateBubbleText?");
+			;//AnalyzerHelpers::Assert("Internal Error: Unknown frame type in GenerateBubbleText?");
 	}
 }
 

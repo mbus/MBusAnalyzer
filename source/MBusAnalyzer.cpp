@@ -55,10 +55,10 @@ void MBusAnalyzer::WorkerThread()
 	}
 
 	if (( mMasterCLK->GetBitState() == BIT_LOW ) || ( mMasterDAT->GetBitState() == BIT_LOW))
-		AnalyzerHelpers::Assert("Master node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
+		;//AnalyzerHelpers::Assert("Master node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
 	for (int i=0; i < mSettings->mMemberCount; i++) {
 		if (( mMemberCLKs.at(i)->GetBitState() == BIT_LOW ) || (mMemberDATs.at(i)->GetBitState() == BIT_LOW))
-			AnalyzerHelpers::Assert("Member node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
+			;//AnalyzerHelpers::Assert("Member node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
 	}
 
 	mLastNodeCLK = mMemberCLKs.at(mMemberCLKs.size()-1);
