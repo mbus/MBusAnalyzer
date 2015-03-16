@@ -54,8 +54,8 @@ U32 MBusSimulationDataGenerator::GenerateSimulationData( U64 largest_sample_requ
 		CreateMBusTransaction(0, 0xA1, 4, data, false);
 		CreateMBusTransaction(0, 0xF00000B2, 4, data, false);
 		data[4] = 0x87; data[5] = 0x65; data[6] = 0x43; data[7] = 0x21;
-		CreateMBusTransaction(0, 0xC3, 8, data, false);
-		CreateMBusTransaction(0, 0xF00000D4, 8, data, false);
+		CreateMBusTransaction(0, 0xC3, 8, data, true);
+		CreateMBusTransaction(0, 0xF00000D4, 8, data, true);
 		data[4] = 0x9A; data[5] = 0xBC;
 		CreateMBusTransaction(0, 0xE5, 6, data, false);
 
@@ -90,7 +90,7 @@ void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address,
 	}
 
 	// Some space before we start
-	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(10) );
+	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(20) );
 
 	{
 		std::vector< bool > normal( mNodeCount, false );
@@ -249,6 +249,24 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 	}
 	 *
 	 */
+
+	// Reserved Drive Edge (CLK)
+	for (int i=0; i<mNodeCount; i++) {
+		mNodeCLKSimulationDatas.at(i)->Transition();
+		PropogationDelay();
+	}
+	// Reserved Drive Edge (DAT)
+	for (int i=0; i<mNodeCount; i++) {
+		;
+	}
+	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
+
+	// Reserved Latch Edge
+	for (int i=0; i<mNodeCount; i++) {
+		mNodeCLKSimulationDatas.at(i)->Transition();
+		PropogationDelay();
+	}
+	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 }
 
 void MBusSimulationDataGenerator::CreateMBusBit(int sender, BitState bit) {

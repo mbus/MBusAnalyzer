@@ -39,7 +39,7 @@ private: // analysis helpers:
 	void Process_IdleToArbitration();
 	void Process_ArbitrationToPriorityArbitration();
 	void Process_PriorityArbitrationToAddress();
-	void Process_SkipBit();
+	void Process_SkipReservedBit();
 	void Process_AddressToData();
 	void Process_DataToInterrupt();
 	void Process_InterruptToControl();

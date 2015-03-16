@@ -68,7 +68,7 @@ void MBusAnalyzer::WorkerThread()
 		Process_IdleToArbitration();
 		Process_ArbitrationToPriorityArbitration();
 		Process_PriorityArbitrationToAddress();
-		Process_SkipBit();
+		Process_SkipReservedBit();
 		Process_AddressToData();
 		Process_DataToInterrupt();
 		Process_InterruptToControl();
@@ -257,12 +257,22 @@ void MBusAnalyzer::Process_PriorityArbitrationToAddress() {
 	ReportProgress( mLastNodeCLK->GetSampleNumber() );
 }
 
-void MBusAnalyzer::Process_SkipBit() {
+void MBusAnalyzer::Process_SkipReservedBit() {
+	Frame frame;
+	frame.mFlags = 0;
+	frame.mStartingSampleInclusive = mLastNodeCLK->GetSampleNumber()+1;
+
 	// Skip a bit
 	mLastNodeCLK->AdvanceToNextEdge();
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 	mLastNodeCLK->AdvanceToNextEdge();
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+
+	frame.mType = FrameTypeReservedBit;
+	frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
+	mResults->AddFrame(frame);
+	mResults->CommitResults();
+	ReportProgress( mLastNodeCLK->GetSampleNumber() );
 }
 
 void MBusAnalyzer::Process_AddressToData() {
