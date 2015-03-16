@@ -55,10 +55,10 @@ void MBusAnalyzer::WorkerThread()
 	}
 
 	if (( mMasterCLK->GetBitState() == BIT_LOW ) || ( mMasterDAT->GetBitState() == BIT_LOW))
-		AnalyzerHelpers::Assert("Master node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
+		;//AnalyzerHelpers::Assert("Master node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
 	for (int i=0; i < mSettings->mMemberCount; i++) {
 		if (( mMemberCLKs.at(i)->GetBitState() == BIT_LOW ) || (mMemberDATs.at(i)->GetBitState() == BIT_LOW))
-			AnalyzerHelpers::Assert("Member node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
+			;//AnalyzerHelpers::Assert("Member node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
 	}
 
 	mLastNodeCLK = mMemberCLKs.at(mMemberCLKs.size()-1);
@@ -68,6 +68,7 @@ void MBusAnalyzer::WorkerThread()
 		Process_IdleToArbitration();
 		Process_ArbitrationToPriorityArbitration();
 		Process_PriorityArbitrationToAddress();
+		Process_SkipReservedBit();
 		Process_AddressToData();
 		Process_DataToInterrupt();
 		Process_InterruptToControl();
@@ -82,7 +83,7 @@ bool MBusAnalyzer::AdvanceAllTo(U64 sample, bool interruptable) {
 		mNodeCLKs.at(i)->AdvanceToAbsPosition(sample);
 		if (mNodeDATs.at(i)->AdvanceToAbsPosition(sample) > 3) {
 			if (!interruptable) {
-				AnalyzerHelpers::Assert("Unexpected Interrupt: The Analyzer isn't very good at handling Interrupts when they don't occur on clean 32-bit data boundaries. Things are probably garbage after here.");
+				//AnalyzerHelpers::Assert("Unexpected Interrupt: The Analyzer isn't very good at handling Interrupts when they don't occur on clean 32-bit data boundaries. Things are probably garbage after here.");
 			}
 			interrupted = true;
 		}
@@ -187,8 +188,10 @@ void MBusAnalyzer::Process_ArbitrationToPriorityArbitration() {
 			}
 		}
 	}
+	/*
 	if (arbitrationWinner == -1)
 		AnalyzerHelpers::Assert("Analyzer does not yet support 'No Arbitration Winner' case");
+	*/
 	mTransmitter = arbitrationWinner;
 
 	frame.mData1 = 0;
@@ -248,6 +251,24 @@ void MBusAnalyzer::Process_PriorityArbitrationToAddress() {
 	mLastNodeCLK->AdvanceToNextEdge();
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 
+	frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
+	mResults->AddFrame(frame);
+	mResults->CommitResults();
+	ReportProgress( mLastNodeCLK->GetSampleNumber() );
+}
+
+void MBusAnalyzer::Process_SkipReservedBit() {
+	Frame frame;
+	frame.mFlags = 0;
+	frame.mStartingSampleInclusive = mLastNodeCLK->GetSampleNumber()+1;
+
+	// Skip a bit
+	mLastNodeCLK->AdvanceToNextEdge();
+	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+	mLastNodeCLK->AdvanceToNextEdge();
+	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+
+	frame.mType = FrameTypeReservedBit;
 	frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
 	mResults->AddFrame(frame);
 	mResults->CommitResults();
@@ -314,21 +335,28 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 		for (int i=0; i < 7; i++) {
 			// Latch Drive Bit N (Data is MSB, byte-granularity)
 			mLastNodeCLK->AdvanceToNextEdge();
-			AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+			if (interrupted)
+				break;
 			data <<= 1;
 			data |= mLastNodeDAT->GetBitState() == BIT_HIGH;
 			// Advance to Drive Bit N+1
 			mLastNodeCLK->AdvanceToNextEdge();
-			AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+			if (interrupted)
+				break;
 		}
-		// Latch Drive Bit 8
-		mLastNodeCLK->AdvanceToNextEdge();
-		AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
-		data <<= 1;
-		data |= mLastNodeDAT->GetBitState() == BIT_HIGH;
-		// Advance to Drive Bit of next word; may interrupt
-		mLastNodeCLK->AdvanceToNextEdge();
-		interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber(), true );
+
+		if (!interrupted) {
+			// Latch Drive Bit 8
+			mLastNodeCLK->AdvanceToNextEdge();
+			AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+			data <<= 1;
+			data |= mLastNodeDAT->GetBitState() == BIT_HIGH;
+			// Advance to Drive Bit of next word; may interrupt
+			mLastNodeCLK->AdvanceToNextEdge();
+			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber(), true );
+		}
 
 		outfile << "Data " << std::hex << (U32) data << std::endl;
 		outfile.flush();

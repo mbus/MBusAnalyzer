@@ -7,6 +7,7 @@ enum MBusFrameType {
 	FrameTypeRequest,
 	FrameTypeArbitration,
 	FrameTypePriorityArbitration,
+	FrameTypeReservedBit,
 	FrameTypeAddress,
 	FrameTypeData,
 	FrameTypeInterrupt,

@@ -46,9 +46,11 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 				AddResultString("Request Phase");
 			} else {
 				if (data) {
+					AddResultString("R");
 					AddResultString("Req");
 					AddResultString("Requested");
 				} else {
+					AddResultString("!R");
 					AddResultString("!Req");
 					AddResultString("Did not Request");
 				}
@@ -56,9 +58,11 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			break;
 		case FrameTypeArbitration:
 			if (data) {
+				AddResultString("A");
 				AddResultString("Arb");
 				AddResultString("Won Arbitration");
 			} else {
+				AddResultString("!A");
 				AddResultString("!Arb");
 				AddResultString("Lost Arbitration");
 				AddResultString("Lost Arbitration (Or Did Not Participate)");
@@ -66,16 +70,23 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			break;
 		case FrameTypePriorityArbitration:
 			if (data) {
+				AddResultString("P");
 				AddResultString("Pri");
 				AddResultString("Won Priority");
 				AddResultString("Won Priority Arbitration");
 			} else {
+				AddResultString("!P");
 				AddResultString("!Pri");
 				AddResultString("Lost Priority");
 				AddResultString("Lost Priority Arbitration");
 				AddResultString("Lost Priority (Or Did Not Participate)");
 				AddResultString("Lost Priority Arbitration (Or Did Not Participate)");
 			}
+			break;
+		case FrameTypeReservedBit:
+			AddResultString("V");
+			AddResultString("Rsvd");
+			AddResultString("Reserved");
 			break;
 		case FrameTypeAddress:
 			{
@@ -124,9 +135,11 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 		case FrameTypeControlBit1:
 			if (mCB0) {
 				if (data) {
+					AddResultString("!K");
 					AddResultString("Nak");
 					AddResultString("Control Bit 1: Nak");
 				} else {
+					AddResultString("K");
 					AddResultString("Ack");
 					AddResultString("Control Bit 1: Ack");
 				}
@@ -143,7 +156,7 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			}
 			break;
 		default:
-			AnalyzerHelpers::Assert("Internal Error: Unknown frame type in GenerateBubbleText?");
+			;//AnalyzerHelpers::Assert("Internal Error: Unknown frame type in GenerateBubbleText?");
 	}
 }
 
