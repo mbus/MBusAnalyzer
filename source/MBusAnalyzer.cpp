@@ -65,11 +65,15 @@ void MBusAnalyzer::WorkerThread()
 	mLastNodeDAT = mMemberDATs.at(mMemberDATs.size()-1);
 
 	while (true) {
+		mSettings->log_hack << "LYZ: " << __LINE__ << ": Start transaction loop" << std::endl;
+		mEstClockFreq = 0;
 		Process_IdleToArbitration();
 		Process_ArbitrationToPriorityArbitration();
 		Process_PriorityArbitrationToAddress();
 		Process_SkipReservedBit();
-		Process_AddressToData();
+		if (mTransmitter != -1) {
+			Process_AddressToData();
+		}
 		Process_DataToInterrupt();
 		Process_InterruptToControl();
 		Process_ControlToIdle();
@@ -188,10 +192,10 @@ void MBusAnalyzer::Process_ArbitrationToPriorityArbitration() {
 			}
 		}
 	}
-	/*
-	if (arbitrationWinner == -1)
-		AnalyzerHelpers::Assert("Analyzer does not yet support 'No Arbitration Winner' case");
-	*/
+	if (arbitrationWinner == -1) {
+		frame.mFlags |= NO_ARBITRATION_WINNER | DISPLAY_AS_WARNING_FLAG;
+	}
+
 	mTransmitter = arbitrationWinner;
 
 	frame.mData1 = 0;
@@ -209,6 +213,8 @@ void MBusAnalyzer::Process_ArbitrationToPriorityArbitration() {
 	mResults->AddFrame(frame);
 	mResults->CommitResults();
 	ReportProgress( mLastNodeCLK->GetSampleNumber() );
+
+	mEstClockFreq = frame.mEndingSampleInclusive - frame.mStartingSampleInclusive;
 }
 
 void MBusAnalyzer::Process_PriorityArbitrationToAddress() {
@@ -220,31 +226,36 @@ void MBusAnalyzer::Process_PriorityArbitrationToAddress() {
 	mLastNodeCLK->AdvanceToNextEdge();
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 
-	int prioArbitrationWinner = -1;
-	if (mNodeDATs.at(mTransmitter)->GetBitState() == BIT_LOW)
-		prioArbitrationWinner = mTransmitter;
-	else {
-		int start = (mTransmitter+1) % mNodeDATs.size();
-		for (int j=start; j<start+mNodeDATs.size()-1; j++) {
-			int k = j % mNodeDATs.size();
-			if (
-					(mNodeDATs.at((k-1)%mNodeDATs.size())->GetBitState() == BIT_LOW) &&
-					(mNodeDATs.at(k)->GetBitState() == BIT_HIGH)
-			   ) {
-				if (prioArbitrationWinner != -1)
-					frame.mFlags |= MULTIPLE_ARBITRATION_WINNER | DISPLAY_AS_ERROR_FLAG;
-				prioArbitrationWinner = k;
+	if (mTransmitter == -1) {
+		// No arbitration winner => no prio
+		frame.mFlags |= NO_ARBITRATION_WINNER | DISPLAY_AS_WARNING_FLAG;
+	} else {
+		int prioArbitrationWinner = -1;
+		if (mNodeDATs.at(mTransmitter)->GetBitState() == BIT_LOW)
+			prioArbitrationWinner = mTransmitter;
+		else {
+			int start = (mTransmitter+1) % mNodeDATs.size();
+			for (int j=start; j<start+mNodeDATs.size()-1; j++) {
+				int k = j % mNodeDATs.size();
+				if (
+						(mNodeDATs.at((k-1)%mNodeDATs.size())->GetBitState() == BIT_LOW) &&
+						(mNodeDATs.at(k)->GetBitState() == BIT_HIGH)
+				   ) {
+					if (prioArbitrationWinner != -1)
+						frame.mFlags |= MULTIPLE_ARBITRATION_WINNER | DISPLAY_AS_ERROR_FLAG;
+					prioArbitrationWinner = k;
+				}
 			}
 		}
-	}
-	if (prioArbitrationWinner != -1)
-		mTransmitter = prioArbitrationWinner;
+		if (prioArbitrationWinner != -1)
+			mTransmitter = prioArbitrationWinner;
 
-	frame.mData1 = 0;
-	for (int i=0; i<mNodeDATs.size(); i++) {
-		frame.mData1 |= ((U64) (prioArbitrationWinner == i)) << (i+32);
+		frame.mData1 = 0;
+		for (int i=0; i<mNodeDATs.size(); i++) {
+			frame.mData1 |= ((U64) (prioArbitrationWinner == i)) << (i+32);
+		}
+		frame.mData2 = 1;
 	}
-	frame.mData2 = 1;
 	frame.mType = FrameTypePriorityArbitration;
 
 	// Get to Drive Bit 0 edge before ending this frame
@@ -255,6 +266,8 @@ void MBusAnalyzer::Process_PriorityArbitrationToAddress() {
 	mResults->AddFrame(frame);
 	mResults->CommitResults();
 	ReportProgress( mLastNodeCLK->GetSampleNumber() );
+
+	mEstClockFreq = (mEstClockFreq + (frame.mEndingSampleInclusive - frame.mStartingSampleInclusive)) / 2;
 }
 
 void MBusAnalyzer::Process_SkipReservedBit() {
@@ -265,8 +278,15 @@ void MBusAnalyzer::Process_SkipReservedBit() {
 	// Skip a bit
 	mLastNodeCLK->AdvanceToNextEdge();
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
-	mLastNodeCLK->AdvanceToNextEdge();
-	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+
+	if (mLastNodeCLK->GetSampleOfNextEdge() > mLastNodeDAT->GetSampleOfNextEdge()) {
+		// An Interrupt occurred
+		AdvanceAllTo( mLastNodeDAT->GetSampleOfNextEdge() - 1 );
+	} else {
+		// Normal operation (clk before data)
+		mLastNodeCLK->AdvanceToNextEdge();
+		AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
+	}
 
 	frame.mType = FrameTypeReservedBit;
 	frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
@@ -353,6 +373,10 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 			AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 			data <<= 1;
 			data |= mLastNodeDAT->GetBitState() == BIT_HIGH;
+
+			// Save current point in time in case next transition is interrupt
+			frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
+
 			// Advance to Drive Bit of next word; may interrupt
 			mLastNodeCLK->AdvanceToNextEdge();
 			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber(), true );
@@ -363,6 +387,13 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 
 		frame.mData1 = data;
 		frame.mType = FrameTypeData;
+		if (interrupted) {
+			mResults->AddFrame(frame);
+			mResults->CommitResults();
+
+			frame.mStartingSampleInclusive = frame.mEndingSampleInclusive + 1;
+			frame.mType = FrameTypeInterrupt;
+		}
 
 		frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
 		mResults->AddFrame(frame);

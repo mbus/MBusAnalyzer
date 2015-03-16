@@ -1,6 +1,8 @@
 #ifndef MBUS_ANALYZER_SETTINGS
 #define MBUS_ANALYZER_SETTINGS
 
+#include <fstream>
+
 #include <AnalyzerSettings.h>
 #include <AnalyzerTypes.h>
 
@@ -40,6 +42,8 @@ public:
 	bool mMemberActive[MAX_MBUS_MEMBERS];
 	Channel mMemberCLKChannels[MAX_MBUS_MEMBERS];
 	Channel mMemberDATChannels[MAX_MBUS_MEMBERS];
+
+	std::ofstream log_hack;
 
 protected:
 	std::auto_ptr< AnalyzerSettingInterfaceChannel >   mMasterCLKChannelInterface;

@@ -3,6 +3,7 @@
 
 #include <SimulationChannelDescriptor.h>
 #include <AnalyzerHelpers.h> // For ClockGenerator
+#include <fstream>
 #include <string>
 #include <vector>
 class MBusAnalyzerSettings;
@@ -28,8 +29,10 @@ protected:
 	int mNodeCount;
 
 private:
+	void CreateMBusWakeup(int sender);
 	void CreateMBusTransaction(int sender, U32 address, U8 num_bytes, U8 data[], bool acked);
 	void CreateMBusArbitration(std::vector< bool > normal, std::vector< bool > priority);
+	void CreateMBusArbitration(std::vector< bool > normal, std::vector< bool > priority, std::vector< bool > wakeup);
 	void CreateMBusData(int sender, U32 address, U8 num_bytes, U8 data[]);
 	void CreateMBusBit(int sender, BitState bit);
 	void CreateMBusInterrupt(int interrupter);

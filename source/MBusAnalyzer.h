@@ -53,6 +53,7 @@ private: // analysis helpers:
 	std::vector< AnalyzerChannelData * > mNodeCLKs;
 	std::vector< AnalyzerChannelData * > mNodeDATs;
 
+	int mEstClockFreq;
 	int mTransmitter;
 	bool requestBugWorkaround;
 };

@@ -13,6 +13,10 @@ MBusAnalyzerSettings::MBusAnalyzerSettings()
 	mMasterDATChannel( UNDEFINED_CHANNEL ),
 	mMemberCount( 0 )
 {
+	log_hack.open("C:\\TEMP\\MBusAnalyzerLogHack.txt");
+	log_hack << "LOG HACK BEGIN\n\n";
+	log_hack.flush();
+
 	mMasterCLKChannelInterface.reset( new AnalyzerSettingInterfaceChannel() );
 	mMasterCLKChannelInterface->SetTitleAndTooltip( "Master CLK", "Connect to CLK_OUT of Master" );
 	mMasterCLKChannelInterface->SetChannel( mMasterCLKChannel );
@@ -142,8 +146,10 @@ bool MBusAnalyzerSettings::SetSettingsFromInterfaces()
 		mMemberDATChannels[i] = NodeDATChannels[i+1];
 
 #ifdef FUCK_THIS
-		if (mMemberActive[i] != true)
+		if (mMemberActive[i] != true) {
+			log_hack << "SET: Unexpected inactive member" << std::endl;
 			AnalyzerHelpers::Assert("How the fuck did this happen here?");
+		}
 #endif
 		AddChannel( mMemberCLKChannels[i], "MBus Member CLK", mMemberActive[i] );
 		AddChannel( mMemberDATChannels[i], "MBus Member DAT", mMemberActive[i] );
@@ -183,8 +189,10 @@ void MBusAnalyzerSettings::LoadSettings( const char* settings )
 	AddChannel( mMasterDATChannel, "MBus Master DAT", true );
 	for (int i=0; i < MAX_MBUS_MEMBERS; i++) {
 #ifdef FUCK_THIS
-		if (mMemberActive[i] != true)
+		if (mMemberActive[i] != true) {
+			log_hack << "SET: " << __LINE__ << ": Unexpected inactive member " << i << std::endl;
 			AnalyzerHelpers::Assert("How the fuck did this happen?");
+		}
 #endif
 		AddChannel( mMemberCLKChannels[i], "MBus Member CLK", mMemberActive[i] );
 		AddChannel( mMemberDATChannels[i], "MBus Member DAT", mMemberActive[i] );

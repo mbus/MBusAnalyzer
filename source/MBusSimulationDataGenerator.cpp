@@ -3,6 +3,8 @@
 
 #include <AnalyzerHelpers.h>
 
+#include <iostream>
+#include <fstream>
 #include <cstdlib>
 #include <algorithm> // std::random_shuffle
 
@@ -59,6 +61,9 @@ U32 MBusSimulationDataGenerator::GenerateSimulationData( U64 largest_sample_requ
 		data[4] = 0x9A; data[5] = 0xBC;
 		CreateMBusTransaction(0, 0xE5, 6, data, false);
 
+		mSettings->log_hack << "\nSIM: Before CreateMBusWakeup" << std::endl;
+		CreateMBusWakeup(1);
+
 		// Imager messages: To address 0x17, 1 row / message
 		// 8 bits/column x 160 columns = 160 bytes / message
 		// There are 160 rows. Closes with a single 32-bit message
@@ -79,14 +84,80 @@ void MBusSimulationDataGenerator::PropogationDelay() {
 	mMBusSimulationChannels.AdvanceAll( std::rand() % 3 + 1 );
 }
 
-void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address, U8 num_bytes, U8 data[], bool acked) {
-	static int num_calls = 0;
-	num_calls++;
+void MBusSimulationDataGenerator::CreateMBusWakeup(int sender) {
 	for (int i=0; i < mNodeCount; i++) {
-		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
+		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction must be entered with all lines high (Fail CLK)" << std::endl;
 			AnalyzerHelpers::Assert("CreateMBusTransaction must be entered with all lines high (Fail CLK)");
-		if (mNodeDATSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
+		}
+		if (mNodeDATSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction must be entered with all lines high (Fail DAT)" << std::endl;
 			AnalyzerHelpers::Assert("CreateMBusTransaction must be entered with all lines high (Fail DAT)");
+		}
+	}
+
+	// Some space before we start
+	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(50) );
+
+	{
+		std::vector< bool > normal( mNodeCount, false );
+		std::vector< bool > priority( mNodeCount, false );
+		std::vector< bool > wakeup( mNodeCount, false );
+
+		wakeup.at(sender) = true;
+		CreateMBusArbitration(normal, priority, wakeup); // Through PrioLatch inclusive
+
+		for (int i=0; i<mNodeCount; i++) {
+			if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+				mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusArbitration did not exit with CLK's high?" << std::endl;
+				AnalyzerHelpers::Assert("CreateMBusArbitration did not exit with CLK's high?");
+			}
+		}
+	}
+
+	CreateMBusInterrupt(0); // Through Interrupt Asserted edge inclusive
+	for (int i=0; i<mNodeCount; i++) {
+		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusInterrupt did not exit with CLK's high?" << std::endl;
+			AnalyzerHelpers::Assert("CreateMBusInterrupt did not exit with CLK's high?");
+		}
+	}
+	CreateMBusControl(0, BIT_LOW, 0, BIT_LOW); // Through Begin Idle latch inclusive
+	for (int i=0; i<mNodeCount; i++) {
+		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusControl did not exit with CLK's high?" << std::endl;
+			AnalyzerHelpers::Assert("CreateMBusControl did not exit with CLK's high?");
+		}
+	}
+
+	// Some space after the end
+	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(20) );
+
+	// Sanity check: Make sure we left all the lines high
+	for (int i=0; i < mNodeCount; i++) {
+		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction should exit with all lines high (Fail CLK)" << std::endl;
+			AnalyzerHelpers::Assert("CreateMBusTransaction should exit with all lines high (Fail CLK)");
+		}
+		if (mNodeDATSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction should exit with all lines high (Fail DAT)" << std::endl;
+			AnalyzerHelpers::Assert("CreateMBusTransaction should exit with all lines high (Fail DAT)");
+		}
+	}
+}
+
+void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address, U8 num_bytes, U8 data[], bool acked) {
+	mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction start" << std::endl;
+
+	for (int i=0; i < mNodeCount; i++) {
+		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction must be entered with all lines high (Fail CLK)" << std::endl;
+			AnalyzerHelpers::Assert("CreateMBusTransaction must be entered with all lines high (Fail CLK)");
+		}
+		if (mNodeDATSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction must be entered with all lines high (Fail DAT)" << std::endl;
+			AnalyzerHelpers::Assert("CreateMBusTransaction must be entered with all lines high (Fail DAT)");
+		}
 	}
 
 	// Some space before we start
@@ -100,8 +171,10 @@ void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address,
 		CreateMBusArbitration(normal, priority); // Through PrioLatch inclusive
 
 		for (int i=0; i<mNodeCount; i++) {
-			if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
+			if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
+				mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusArbitration did not exit with CLK's high?" << std::endl;
 				AnalyzerHelpers::Assert("CreateMBusArbitration did not exit with CLK's high?");
+			}
 		}
 	}
 
@@ -128,9 +201,18 @@ void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address,
 		if (mNodeDATSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
 			AnalyzerHelpers::Assert("CreateMBusTransaction should exit with all lines high (Fail DAT)");
 	}
+
+	mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusTransaction end" << std::endl;
 }
 
 void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > normal, std::vector< bool > priority) {
+	std::vector< bool > wakeup( normal.size(), false );
+	CreateMBusArbitration(normal, priority, wakeup);
+}
+
+void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > normal, std::vector< bool > priority, std::vector< bool > wakeup) {
+	mSettings->log_hack << "SIM: CreateMBusArbitration Begin" << std::endl;
+
 	std::vector< int > arb_order;
 	for (int i=0; i<normal.size(); i++) {
 		arb_order.push_back(i);
@@ -138,8 +220,9 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 	std::random_shuffle(arb_order.begin(), arb_order.end());
 
 	// Generate request signal(s)
+	mSettings->log_hack << "SIM: gen request sigs" << std::endl;
 	for (int i=0; i<arb_order.size(); i++) {
-		if (normal.at(i))
+		if (normal.at(i) || wakeup.at(i))
 			mNodeDATSimulationDatas.at(i)->TransitionIfNeeded( BIT_LOW );
 		PropogationDelay();
 
@@ -157,16 +240,27 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 	}
 
 	// "t_long"
+	mSettings->log_hack << "SIM: t_long" << std::endl;
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(5) );
 
 	// Falling clock to start transaction
+	mSettings->log_hack << "SIM: fall clock to start tx" << std::endl;
+	bool any_request = false;
 	for (int i=0; i<normal.size(); i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
+
+		// Deassert wakeup requests; assumes master is node 0
+		if (normal.at(i) || any_request) {
+			any_request = true;
+		} else {
+			mNodeDATSimulationDatas.at(i)->TransitionIfNeeded (BIT_HIGH);
+		}
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
 	// Arbitration Edge
+	mSettings->log_hack << "SIM: arb edge" << std::endl;
 	for (int i=0; i<normal.size(); i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
@@ -174,6 +268,7 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
 	// Resolve arbitration winner internally
+	mSettings->log_hack << "SIM: resolve arb winner" << std::endl;
 	int arbitrationWinner = -1;
 	if (mNodeDATSimulationDatas.at(0)->GetCurrentBitState() == BIT_LOW)
 		arbitrationWinner = 0;
@@ -189,38 +284,42 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 			}
 		}
 	}
-	if (arbitrationWinner == -1)
-		AnalyzerHelpers::Assert("No arbitration winner not currently supported");
 
 	// The timing here is too simple for now (all clocks then all datas),
 	// but generating anything more is prohibitively complex for gen 1
 	//
 	// Prio Drive Edge (CLK)
+	mSettings->log_hack << "SIM: prio drive edge clk" << std::endl;
 	for (int i=0; i<mNodeCount; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}
 	// Prio Drive Edge (DAT)
-	for (int i=0; i<mNodeCount; i++) {
-		if (priority.at(i))
-			mNodeDATSimulationDatas.at(i)->TransitionIfNeeded( BIT_HIGH );
-		PropogationDelay();
-
-		// Propogate this node's request
-		for (int j=i; j<i+mNodeCount; j++) {
-			int k = j % mNodeCount;
-			// Ignore arbitration winner as it doesn't forward
-			if (k == arbitrationWinner)
-				continue;
-
-			if (mNodeDATSimulationDatas.at((k-1)%mNodeCount)->GetCurrentBitState() == BIT_HIGH)
-				mNodeDATSimulationDatas.at(k)->TransitionIfNeeded( BIT_HIGH );
+	mSettings->log_hack << "SIM: prio drive edge dat" << std::endl;
+	if (arbitrationWinner != -1) {
+		// Only deal with prio if someone won arb
+		for (int i=0; i<mNodeCount; i++) {
+			if (priority.at(i))
+				mNodeDATSimulationDatas.at(i)->TransitionIfNeeded( BIT_HIGH );
 			PropogationDelay();
+
+			// Propogate this node's request
+			for (int j=i; j<i+mNodeCount; j++) {
+				int k = j % mNodeCount;
+				// Ignore arbitration winner as it doesn't forward
+				if (k == arbitrationWinner)
+					continue;
+
+				if (mNodeDATSimulationDatas.at((k-1)%mNodeCount)->GetCurrentBitState() == BIT_HIGH)
+					mNodeDATSimulationDatas.at(k)->TransitionIfNeeded( BIT_HIGH );
+				PropogationDelay();
+			}
 		}
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
 	// Prio Latch Edge
+	mSettings->log_hack << "SIM: prio latch edge" << std::endl;
 	for (int i=0; i<mNodeCount; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
@@ -251,22 +350,27 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 	 */
 
 	// Reserved Drive Edge (CLK)
+	mSettings->log_hack << "SIM: rsv clk" << std::endl;
 	for (int i=0; i<mNodeCount; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}
 	// Reserved Drive Edge (DAT)
+	mSettings->log_hack << "SIM: rsv dat" << std::endl;
 	for (int i=0; i<mNodeCount; i++) {
 		;
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
 	// Reserved Latch Edge
+	mSettings->log_hack << "SIM: rsv latch" << std::endl;
 	for (int i=0; i<mNodeCount; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
+
+	mSettings->log_hack << "SIM: Gen Arb Done" << std::endl;
 }
 
 void MBusSimulationDataGenerator::CreateMBusBit(int sender, BitState bit) {
@@ -296,6 +400,7 @@ void MBusSimulationDataGenerator::CreateMBusBit(int sender, BitState bit) {
 void MBusSimulationDataGenerator::CreateMBusData(int sender, U32 address, U8 num_bytes, U8 data[]) {
 	if (address > 0xff) {
 		if ((address & 0xf0000000) != 0xf0000000) {
+			mSettings->log_hack << "SIM: " << __LINE__ << ": Big address but top bits not 0xf " << address << std::endl;
 			AnalyzerHelpers::Assert("If address is greater than 8 bits, the top 4 bits *must* be 0xf");
 		}
 		BitExtractor addressBits(address, AnalyzerEnums::MsbFirst, 32);

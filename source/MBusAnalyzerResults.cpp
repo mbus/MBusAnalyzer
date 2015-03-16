@@ -57,7 +57,11 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			}
 			break;
 		case FrameTypeArbitration:
-			if (data) {
+			if (frame.mFlags & NO_ARBITRATION_WINNER) {
+				AddResultString("~A");
+				AddResultString("No Arb");
+				AddResultString("No Arbitration Winner");
+			} else if (data) {
 				AddResultString("A");
 				AddResultString("Arb");
 				AddResultString("Won Arbitration");
@@ -69,7 +73,11 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 			}
 			break;
 		case FrameTypePriorityArbitration:
-			if (data) {
+			if (frame.mFlags & NO_ARBITRATION_WINNER) {
+				AddResultString("~P");
+				AddResultString("No Prio");
+				AddResultString("No Priority Arbitration Winner");
+			} else if (data) {
 				AddResultString("P");
 				AddResultString("Pri");
 				AddResultString("Won Priority");
@@ -120,6 +128,11 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 
 				outfile << "Data " << number_str << std::endl;
 			}
+			break;
+		case FrameTypeInterrupt:
+			AddResultString("I");
+			AddResultString("Int");
+			AddResultString("Interrupt");
 			break;
 		case FrameTypeControlBit0:
 			mCB0 = data;

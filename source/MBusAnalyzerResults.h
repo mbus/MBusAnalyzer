@@ -16,7 +16,8 @@ enum MBusFrameType {
 };
 
 #define MULTIPLE_ARBITRATION_WINNER (1 << 0)
-#define REQUEST_BUG_WORKAROUND      (1 << 1)
+#define NO_ARBITRATION_WINNER		(1 << 1)
+#define REQUEST_BUG_WORKAROUND      (1 << 2)
 
 class MBusAnalyzer;
 class MBusAnalyzerSettings;
