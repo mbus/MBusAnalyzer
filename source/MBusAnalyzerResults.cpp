@@ -180,20 +180,39 @@ void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 	U64 trigger_sample = mAnalyzer->GetTriggerSample();
 	U32 sample_rate = mAnalyzer->GetSampleRate();
 
-	file_stream << "Time [s],Value" << std::endl;
+	file_stream << "Time [s], Addr, Data" << std::endl;
 
 	U64 num_frames = GetNumFrames();
 	for( U32 i=0; i < num_frames; i++ )
 	{
 		Frame frame = GetFrame( i );
-		
-		char time_str[128];
-		AnalyzerHelpers::GetTimeString( frame.mStartingSampleInclusive, trigger_sample, sample_rate, time_str, 128 );
+		U32 data = frame.mData1;
 
-		char number_str[128];
-		AnalyzerHelpers::GetNumberString( frame.mData1, display_base, 8, number_str, 128 );
+		switch (frame.mType) {
+			case FrameTypeAddress:
+				{
+				char time_str[128];
+				AnalyzerHelpers::GetTimeString( frame.mStartingSampleInclusive, trigger_sample, sample_rate, time_str, 128 );
+				file_stream << time_str << ", ";
 
-		file_stream << time_str << "," << number_str << std::endl;
+				char number_str[64];
+				int addr_len = ((data & 0xf0000000) == 0xf0000000) ? 32 : 8;
+				AnalyzerHelpers::GetNumberString(data, display_base, addr_len, number_str, 64);
+				file_stream << number_str << ", ";
+				break;
+				}
+
+			case FrameTypeData:
+				{
+				char number_str[64];
+				AnalyzerHelpers::GetNumberString(data, display_base, 8, number_str, 64);
+				file_stream << number_str;
+				break;
+				}
+
+			case FrameTypeInterrupt:
+				file_stream << std::endl;
+		};
 
 		if( UpdateExportProgressAndCheckForCancel( i, num_frames ) == true )
 		{
