@@ -180,8 +180,9 @@ void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 	U64 trigger_sample = mAnalyzer->GetTriggerSample();
 	U32 sample_rate = mAnalyzer->GetSampleRate();
 
-	file_stream << "Time [s], Addr, Data" << std::endl;
+	file_stream << "Time [s], Addr [in hex], Data [in hex]" << std::endl;
 
+	bool new_frame = true;
 	U64 num_frames = GetNumFrames();
 	for( U32 i=0; i < num_frames; i++ )
 	{
@@ -191,6 +192,8 @@ void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 		switch (frame.mType) {
 			case FrameTypeAddress:
 				{
+				new_frame = true;
+
 				char time_str[128];
 				AnalyzerHelpers::GetTimeString( frame.mStartingSampleInclusive, trigger_sample, sample_rate, time_str, 128 );
 				file_stream << time_str << ", ";
@@ -204,9 +207,12 @@ void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 
 			case FrameTypeData:
 				{
-				char number_str[64];
-				AnalyzerHelpers::GetNumberString(data, display_base, 8, number_str, 64);
-				file_stream << number_str;
+				if (new_frame) {
+					new_frame = false;
+					file_stream << "0x";
+				}
+
+				file_stream << std::hex << data;
 				break;
 				}
 
