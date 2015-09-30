@@ -183,12 +183,22 @@ void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 
 	file_stream << "Time [s], Addr [in hex], Data [in hex]" << std::endl;
 
+	// Handle picking up in the middle of a transaction by ignoring everything until the first address
+	bool any_frame = false;
 	bool new_frame = true;
 	U64 num_frames = GetNumFrames();
 	for( U32 i=0; i < num_frames; i++ )
 	{
 		Frame frame = GetFrame( i );
 		U32 data = frame.mData1;
+
+		if (!any_frame) {
+			if (frame.mType == FrameTypeAddress) {
+				any_frame = true;
+			} else {
+				continue;
+			}
+		}
 
 		switch (frame.mType) {
 			case FrameTypeAddress:
