@@ -4,6 +4,7 @@
 #include "MBusAnalyzerSettings.h"
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 MBusAnalyzerResults::MBusAnalyzerResults( MBusAnalyzer* analyzer, MBusAnalyzerSettings* settings )
 :	AnalyzerResults(),
@@ -212,7 +213,7 @@ void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 					file_stream << "0x";
 				}
 
-				file_stream << std::hex << data;
+				file_stream << std::hex << std::setw(2) << std::setfill('0') << data;
 				break;
 				}
 
