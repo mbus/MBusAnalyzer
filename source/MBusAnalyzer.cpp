@@ -23,6 +23,8 @@ MBusAnalyzer::~MBusAnalyzer()
 
 void MBusAnalyzer::WorkerThread()
 {
+	mSettings->log_hack << "LYZ: " << __LINE__ << ": Analyzer thread start" << std::endl;
+
 	mResults.reset( new MBusAnalyzerResults( this, mSettings.get() ) );
 	SetAnalyzerResults( mResults.get() );
 	mResults->AddChannelBubblesWillAppearOn( mSettings->mMasterDATChannel );
@@ -61,8 +63,13 @@ void MBusAnalyzer::WorkerThread()
 			;//AnalyzerHelpers::Assert("Member node clock / data lines must be high at time 0. Analyzer does not support starting in the middle of a transaction");
 	}
 
-	mLastNodeCLK = mMemberCLKs.at(mMemberCLKs.size()-1);
-	mLastNodeDAT = mMemberDATs.at(mMemberDATs.size()-1);
+	if (mMemberCLKs.size() == 0) {
+		mLastNodeCLK = mMasterCLK;
+		mLastNodeDAT = mMasterDAT;
+	} else {
+		mLastNodeCLK = mMemberCLKs.at(mMemberCLKs.size()-1);
+		mLastNodeDAT = mMemberDATs.at(mMemberDATs.size()-1);
+	}
 
 	while (true) {
 		mSettings->log_hack << "LYZ: " << __LINE__ << ": Start transaction loop" << std::endl;

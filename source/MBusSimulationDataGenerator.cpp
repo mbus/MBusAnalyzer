@@ -61,8 +61,13 @@ U32 MBusSimulationDataGenerator::GenerateSimulationData( U64 largest_sample_requ
 		data[4] = 0x9A; data[5] = 0xBC;
 		CreateMBusTransaction(0, 0xE5, 6, data, false);
 
-		mSettings->log_hack << "\nSIM: Before CreateMBusWakeup" << std::endl;
-		CreateMBusWakeup(1);
+		// Can't generate this sequence if we don't have any member nodes
+		if (mNodeCount > 1) {
+			mSettings->log_hack << "\nSIM: Before CreateMBusWakeup" << std::endl;
+			CreateMBusWakeup(1);
+		} else {
+			mSettings->log_hack << "\nSIM: Skipping CreateMBusWakeup because only one node" << std::endl;
+		}
 
 		// Imager messages: To address 0x17, 1 row / message
 		// 8 bits/column x 160 columns = 160 bytes / message

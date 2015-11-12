@@ -18,12 +18,12 @@ MBusAnalyzerSettings::MBusAnalyzerSettings()
 	log_hack.flush();
 
 	mMasterCLKChannelInterface.reset( new AnalyzerSettingInterfaceChannel() );
-	mMasterCLKChannelInterface->SetTitleAndTooltip( "Master CLK", "Connect to CLK_OUT of Master" );
+	mMasterCLKChannelInterface->SetTitleAndTooltip( "Master CLK", "Connect to CLK_OUT of Mediator" );
 	mMasterCLKChannelInterface->SetChannel( mMasterCLKChannel );
 	mMasterCLKChannelInterface->SetSelectionOfNoneIsAllowed(false);
 
 	mMasterDATChannelInterface.reset( new AnalyzerSettingInterfaceChannel() );
-	mMasterDATChannelInterface->SetTitleAndTooltip( "Master DAT", "Connect to DAT_OUT of Master" );
+	mMasterDATChannelInterface->SetTitleAndTooltip( "Master DAT", "Connect to DAT_OUT of Mediator" );
 	mMasterDATChannelInterface->SetChannel( mMasterDATChannel );
 	mMasterDATChannelInterface->SetSelectionOfNoneIsAllowed(false);
 
@@ -62,9 +62,7 @@ MBusAnalyzerSettings::MBusAnalyzerSettings()
 		mMemberDATChannelsInterface[i]->SetChannel(mMemberDATChannels[i]);
 		mMemberDATChannelsInterface[i]->SetSelectionOfNoneIsAllowed(true);
 
-#ifndef FUCK_THIS
 		AddInterface( mMemberActiveInterface[i].get() );
-#endif
 		AddInterface( mMemberCLKChannelsInterface[i].get() );
 		AddInterface( mMemberDATChannelsInterface[i].get() );
 	}
@@ -117,7 +115,7 @@ bool MBusAnalyzerSettings::SetSettingsFromInterfaces()
 		}
 
 		if (NodeActive[i] && (NodeCLKChannels[i] == UNDEFINED_CHANNEL)) {
-			SetErrorText("Active member nodes must all have CLK defined. WTF?");
+			SetErrorText("Active member nodes must all have CLK defined.");
 			return false;
 		}
 		if (NodeActive[i] && (NodeDATChannels[i] == UNDEFINED_CHANNEL)) {
@@ -145,12 +143,11 @@ bool MBusAnalyzerSettings::SetSettingsFromInterfaces()
 		mMemberCLKChannels[i] = NodeCLKChannels[i+1];
 		mMemberDATChannels[i] = NodeDATChannels[i+1];
 
-#ifdef FUCK_THIS
 		if (mMemberActive[i] != true) {
-			log_hack << "SET: Unexpected inactive member" << std::endl;
-			AnalyzerHelpers::Assert("How the fuck did this happen here?");
+			log_hack << "SET: Member at index " << i << " is inactive." << std::endl;
+			break;
 		}
-#endif
+
 		AddChannel( mMemberCLKChannels[i], "MBus Member CLK", mMemberActive[i] );
 		AddChannel( mMemberDATChannels[i], "MBus Member DAT", mMemberActive[i] );
 	}
