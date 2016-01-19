@@ -38,9 +38,9 @@ void MBusSimulationDataGenerator::Initialize( U32 simulation_sample_rate, MBusAn
 
 U64 MBusSimulationDataGenerator::minSampleNumber() {
 	U64 min = UINT64_MAX;
-	for (int i=0; i<mNodeCLKSimulationDatas.size(); i++)
+	for (size_t i=0; i<mNodeCLKSimulationDatas.size(); i++)
 		min = (min < mNodeCLKSimulationDatas.at(i)->GetCurrentSampleNumber()) ? min : mNodeCLKSimulationDatas.at(i)->GetCurrentSampleNumber();
-	for (int i=0; i<mNodeDATSimulationDatas.size(); i++)
+	for (size_t i=0; i<mNodeDATSimulationDatas.size(); i++)
 		min = (min < mNodeDATSimulationDatas.at(i)->GetCurrentSampleNumber()) ? min : mNodeDATSimulationDatas.at(i)->GetCurrentSampleNumber();
 	return min;
 }
@@ -218,21 +218,21 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > normal, std::vector< bool > priority, std::vector< bool > wakeup) {
 	mSettings->log_hack << "SIM: CreateMBusArbitration Begin" << std::endl;
 
-	std::vector< int > arb_order;
-	for (int i=0; i<normal.size(); i++) {
+	std::vector< size_t > arb_order;
+	for (size_t i=0; i<normal.size(); i++) {
 		arb_order.push_back(i);
 	}
 	std::random_shuffle(arb_order.begin(), arb_order.end());
 
 	// Generate request signal(s)
 	mSettings->log_hack << "SIM: gen request sigs" << std::endl;
-	for (int i=0; i<arb_order.size(); i++) {
+	for (size_t i=0; i<arb_order.size(); i++) {
 		if (normal.at(i) || wakeup.at(i))
 			mNodeDATSimulationDatas.at(i)->TransitionIfNeeded( BIT_LOW );
 		PropogationDelay();
 
 		// Propogate this node's request
-		for (int j=i; j<i+mNodeCount; j++) {
+		for (unsigned j=i; j<i+mNodeCount; j++) {
 			int k = j % mNodeCount;
 			//  Ignore master node as it doesn't forward
 			if (k == 0)
@@ -251,7 +251,7 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 	// Falling clock to start transaction
 	mSettings->log_hack << "SIM: fall clock to start tx" << std::endl;
 	bool any_request = false;
-	for (int i=0; i<normal.size(); i++) {
+	for (size_t i=0; i<normal.size(); i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 
@@ -266,7 +266,7 @@ void MBusSimulationDataGenerator::CreateMBusArbitration(std::vector< bool > norm
 
 	// Arbitration Edge
 	mSettings->log_hack << "SIM: arb edge" << std::endl;
-	for (int i=0; i<normal.size(); i++) {
+	for (size_t i=0; i<normal.size(); i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}

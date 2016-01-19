@@ -90,7 +90,7 @@ void MBusAnalyzer::WorkerThread()
 bool MBusAnalyzer::AdvanceAllTo(U64 sample, bool interruptable) {
 	bool interrupted = false;
 
-	for (int i=0; i<mNodeCLKs.size(); i++) {
+	for (size_t i=0; i<mNodeCLKs.size(); i++) {
 		mNodeCLKs.at(i)->AdvanceToAbsPosition(sample);
 		if (mNodeDATs.at(i)->AdvanceToAbsPosition(sample) > 3) {
 			if (!interruptable) {
@@ -117,12 +117,12 @@ void MBusAnalyzer::Process_IdleToArbitration() {
 	// VS2012 doesn't support non-constants for array length, annoying but w/e
 	{ // Put into a scope so we don't do anything foolish
 	bool *requested = new bool[ mNodeDATs.size() ];
-	for (int i=0; i < mNodeDATs.size(); i++) requested[i] = false;
+	for (size_t i=0; i < mNodeDATs.size(); i++) requested[i] = false;
 
 	U64  *DOUT_Fall = new U64[ mNodeDATs.size() ];
 
 	// First find the sample number when each node's DOUT falls
-	for (int i=0; i < mNodeDATs.size(); i++) {
+	for (size_t i=0; i < mNodeDATs.size(); i++) {
 		/* It is theoretically possible for DOUTs to never fall until
 		 * data transmission, so advancing to the next edge is unsafe.
 		 * Instead we peek to the end of t_long to see if the node is
@@ -144,7 +144,7 @@ void MBusAnalyzer::Process_IdleToArbitration() {
 	}
 	// Now go through each member node. If a node's DOUT falls _before_
 	// the previous node's DOUT fell then this node is requesting.
-	for (int i=1; i < mNodeDATs.size(); i++) {
+	for (size_t i=1; i < mNodeDATs.size(); i++) {
 		if (DOUT_Fall[i] < DOUT_Fall[i-1]) // min i==1, i-1 ref is safe
 			requested[i] = true;
 	}
@@ -152,7 +152,7 @@ void MBusAnalyzer::Process_IdleToArbitration() {
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 
 	frame.mData1 = 0;
-	for (int i=0; i<mNodeDATs.size(); i++) {
+	for (size_t i=0; i<mNodeDATs.size(); i++) {
 		frame.mData1 |= ((U64) (requested[i])) << (i + 32);
 	}
 	frame.mData2 = 1;
@@ -188,7 +188,7 @@ void MBusAnalyzer::Process_ArbitrationToPriorityArbitration() {
 	if (mMasterDAT->GetBitState() == BIT_LOW)
 		arbitrationWinner = 0;
 	else {
-		for (int i=1; i<mNodeDATs.size(); i++) {
+		for (size_t i=1; i<mNodeDATs.size(); i++) {
 			if (
 					(mNodeDATs.at((i-1)%mNodeDATs.size())->GetBitState() == BIT_HIGH) &&
 					(mNodeDATs.at(i)->GetBitState() == BIT_LOW)
@@ -206,7 +206,7 @@ void MBusAnalyzer::Process_ArbitrationToPriorityArbitration() {
 	mTransmitter = arbitrationWinner;
 
 	frame.mData1 = 0;
-	for (int i=0; i<mNodeDATs.size(); i++) {
+	for (size_t i=0; i<mNodeDATs.size(); i++) {
 		frame.mData1 |= ((U64) (arbitrationWinner == i)) << (i+32);
 	}
 	frame.mData2 = 1;
@@ -242,8 +242,8 @@ void MBusAnalyzer::Process_PriorityArbitrationToAddress() {
 			prioArbitrationWinner = mTransmitter;
 		else {
 			int start = (mTransmitter+1) % mNodeDATs.size();
-			for (int j=start; j<start+mNodeDATs.size()-1; j++) {
-				int k = j % mNodeDATs.size();
+			for (size_t j=start; j<start+mNodeDATs.size()-1; j++) {
+				size_t k = j % mNodeDATs.size();
 				if (
 						(mNodeDATs.at((k-1)%mNodeDATs.size())->GetBitState() == BIT_LOW) &&
 						(mNodeDATs.at(k)->GetBitState() == BIT_HIGH)
@@ -258,7 +258,7 @@ void MBusAnalyzer::Process_PriorityArbitrationToAddress() {
 			mTransmitter = prioArbitrationWinner;
 
 		frame.mData1 = 0;
-		for (int i=0; i<mNodeDATs.size(); i++) {
+		for (size_t i=0; i<mNodeDATs.size(); i++) {
 			frame.mData1 |= ((U64) (prioArbitrationWinner == i)) << (i+32);
 		}
 		frame.mData2 = 1;
