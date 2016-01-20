@@ -174,7 +174,7 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 	}
 }
 
-void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase display_base, U32 export_type_user_id )
+void MBusAnalyzerResults::GenerateCSVFile( const char* file, DisplayBase display_base )
 {
 	std::ofstream file_stream( file, std::ios::out );
 
@@ -240,6 +240,66 @@ void MBusAnalyzerResults::GenerateExportFile( const char* file, DisplayBase disp
 
 	file_stream.close();
 }
+
+void MBusAnalyzerResults::GenerateOutFile(const char* file, DisplayBase display_base)
+{
+	std::ofstream file_stream(file, std::ios::out);
+
+	// Handle picking up in the middle of a transaction by ignoring everything until the first address
+	bool any_frame = false;
+	bool new_frame = true;
+	U64 num_frames = GetNumFrames();
+	for (U32 i = 0; i < num_frames; i++)
+	{
+		Frame frame = GetFrame(i);
+		U32 data = frame.mData1;
+
+		if (!any_frame) {
+			if (frame.mType == FrameTypeAddress) {
+				any_frame = true;
+			}
+			else {
+				continue;
+			}
+		}
+
+		switch (frame.mType) {
+		case FrameTypeAddress:
+		{
+			new_frame = true;
+
+			file_stream << "Address " << std::hex << data << std::endl;
+			break;
+		}
+
+		case FrameTypeData:
+		{
+			file_stream << "Data " << std::hex << (U32)data << std::endl;
+			break;
+		}
+		};
+
+		if (UpdateExportProgressAndCheckForCancel(i, num_frames) == true)
+		{
+			file_stream.close();
+			return;
+		}
+	}
+
+	file_stream.close();
+}
+
+void MBusAnalyzerResults::GenerateExportFile(const char* file, DisplayBase display_base, U32 export_type_user_id)
+{
+	// With apologies to the world for using hard-coded #'s here, see MBusAnalzyerSettings::HACK_FILE_TYPE
+	if (export_type_user_id == 0) {
+		GenerateCSVFile(file, display_base);
+	}
+	else if (export_type_user_id == 1) {
+		GenerateOutFile(file, display_base);
+	}
+}
+
 
 void MBusAnalyzerResults::GenerateFrameTabularText( U64 frame_index, DisplayBase display_base )
 {

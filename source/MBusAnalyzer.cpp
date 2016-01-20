@@ -5,8 +5,6 @@
 #include <iostream>
 #include <fstream>
 
-std::ofstream outfile;
-
 MBusAnalyzer::MBusAnalyzer()
 :	Analyzer(),
 	mSettings( new MBusAnalyzerSettings() ),
@@ -334,13 +332,6 @@ void MBusAnalyzer::Process_AddressToData() {
 		}
 	}
 
-	static bool singleton = false;
-	if (!singleton) {
-		outfile.open("MBus_Analyzer.out", std::ios::out | std::ios::trunc);
-		singleton = true;
-	}
-	outfile << "Address " << std::hex << address << std::endl;
-
 	frame.mData1 = address;
 	frame.mType = FrameTypeAddress;
 
@@ -388,9 +379,6 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 			mLastNodeCLK->AdvanceToNextEdge();
 			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber(), true );
 		}
-
-		outfile << "Data " << std::hex << (U32) data << std::endl;
-		outfile.flush();
 
 		frame.mData1 = data;
 		frame.mType = FrameTypeData;

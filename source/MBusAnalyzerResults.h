@@ -44,6 +44,9 @@ protected:  //vars
 private:
 	int ChannelToIndex(Channel& channel);
 	bool mCB0;
+
+	void GenerateCSVFile(const char* file, DisplayBase display_base);
+	void GenerateOutFile(const char* file, DisplayBase display_base);
 };
 
 #endif //MBUS_ANALYZER_RESULTS

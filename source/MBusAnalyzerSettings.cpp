@@ -67,9 +67,13 @@ MBusAnalyzerSettings::MBusAnalyzerSettings()
 		AddInterface( mMemberDATChannelsInterface[i].get() );
 	}
 
+	// With apologies to the world for using hard-coded #'s here, see MBusAnalyzerResults::HACK_FILE_TYPE
 	AddExportOption( 0, "Export as text/csv file" );
 	AddExportExtension( 0, "text", "txt" );
 	AddExportExtension( 0, "csv", "csv" );
+
+	AddExportOption(1, "Export as .out format");
+	AddExportExtension(1, "Custom format created by the old MBus_analyzer.out hack", "out");
 }
 
 MBusAnalyzerSettings::~MBusAnalyzerSettings()
