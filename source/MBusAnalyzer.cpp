@@ -76,9 +76,7 @@ void MBusAnalyzer::WorkerThread()
 		Process_ArbitrationToPriorityArbitration();
 		Process_PriorityArbitrationToAddress();
 		Process_SkipReservedBit();
-		if (mTransmitter != -1) {
-			Process_AddressToData();
-		}
+		Process_AddressToData();
 		Process_DataToInterrupt();
 		Process_InterruptToControl();
 		Process_ControlToIdle();
@@ -300,6 +298,7 @@ void MBusAnalyzer::Process_SkipReservedBit() {
 	ReportProgress( mLastNodeCLK->GetSampleNumber() );
 }
 
+// FIXME: This function also needs to handle being interrupted correctly
 void MBusAnalyzer::Process_AddressToData() {
 	Frame frame;
 	frame.mFlags = 0;
