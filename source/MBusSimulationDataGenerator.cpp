@@ -52,7 +52,7 @@ U32 MBusSimulationDataGenerator::GenerateSimulationData( U64 largest_sample_requ
 	while( minSampleNumber() < adjusted_largest_sample_requested )
 	{
 		U8 data[256];
-		data[0] = 0x12; data[1] = 0x34; data[2] = 0x56; data[3] = 0x78;
+		data[0] = 0x01; data[1] = 0x23; data[2] = 0x45; data[3] = 0x67;
 		CreateMBusTransaction(0, 0xA1, 4, data, false);
 		CreateMBusTransaction(0, 0xF00000B2, 4, data, false);
 		data[4] = 0x87; data[5] = 0x65; data[6] = 0x43; data[7] = 0x21;
