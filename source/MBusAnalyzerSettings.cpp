@@ -13,7 +13,7 @@ MBusAnalyzerSettings::MBusAnalyzerSettings()
 	mMasterDATChannel( UNDEFINED_CHANNEL ),
 	mMemberCount( 0 )
 {
-	log_hack.open("C:\\TEMP\\MBusAnalyzerLogHack.txt");
+	log_hack.open("MBusAnalyzerLogHack.txt");
 	log_hack << "LOG HACK BEGIN\n\n";
 	log_hack.flush();
 

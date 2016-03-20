@@ -45,7 +45,7 @@ private: // analysis helpers:
 	void Process_InterruptToControl();
 	void Process_ControlToIdle();
 
-	bool AdvanceAllTo(U64 sample, bool interruptable=false);
+	void AdvanceAllTo(U64 sample);
 
 	AnalyzerChannelData* mLastNodeCLK;
 	AnalyzerChannelData* mLastNodeDAT;
@@ -56,6 +56,8 @@ private: // analysis helpers:
 	int mEstClockFreq;
 	int mTransmitter;
 	bool requestBugWorkaround;
+
+	std::ofstream lyz_log_hack;
 };
 
 extern "C" ANALYZER_EXPORT const char* __cdecl GetAnalyzerName();

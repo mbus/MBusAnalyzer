@@ -2,8 +2,15 @@
 #include "MBusAnalyzerSettings.h"
 #include <AnalyzerChannelData.h>
 
+#include <exception>
 #include <iostream>
 #include <fstream>
+
+class InterruptedException : public std::exception {
+	virtual const char* what() const throw () {
+		return "Interrupt Sequence Occurred";
+	}
+} interruptedException;
 
 MBusAnalyzer::MBusAnalyzer()
 :	Analyzer(),
@@ -21,7 +28,9 @@ MBusAnalyzer::~MBusAnalyzer()
 
 void MBusAnalyzer::WorkerThread()
 {
-	mSettings->log_hack << "LYZ: " << __LINE__ << ": Analyzer thread start" << std::endl;
+	lyz_log_hack.open("MBus_LYZ_log_hack.txt");
+	lyz_log_hack << "LYZ: " << __LINE__ << ": Analyzer thread start" << std::endl;
+	lyz_log_hack.flush();
 
 	mResults.reset( new MBusAnalyzerResults( this, mSettings.get() ) );
 	SetAnalyzerResults( mResults.get() );
@@ -70,33 +79,58 @@ void MBusAnalyzer::WorkerThread()
 	}
 
 	while (true) {
-		mSettings->log_hack << "LYZ: " << __LINE__ << ": Start transaction loop" << std::endl;
-		mEstClockFreq = 0;
-		Process_IdleToArbitration();
-		Process_ArbitrationToPriorityArbitration();
-		Process_PriorityArbitrationToAddress();
-		Process_SkipReservedBit();
-		Process_AddressToData();
-		Process_DataToInterrupt();
-		Process_InterruptToControl();
-		Process_ControlToIdle();
+		try {
+			lyz_log_hack << "LYZ: " << __LINE__ << ": Start transaction loop" << std::endl;
+			lyz_log_hack.flush();
+			mEstClockFreq = 0;
+			Process_IdleToArbitration();
+			lyz_log_hack << "IdleToArbitration done" << std::endl;
+			Process_ArbitrationToPriorityArbitration();
+			lyz_log_hack << "ArbToPrioArb done" << std::endl;
+			Process_PriorityArbitrationToAddress();
+			lyz_log_hack << "PrioArbToAddr done" << std::endl;
+			Process_SkipReservedBit();
+			lyz_log_hack << "SkipReservedBit done" << std::endl;
+			Process_AddressToData();
+			lyz_log_hack << "AddrToData done" << std::endl;
+			Process_DataToInterrupt();
+			lyz_log_hack << "DataToInt done" << std::endl;
+			Process_InterruptToControl();
+			lyz_log_hack << "IntToControl done" << std::endl;
+			Process_ControlToIdle();
+			lyz_log_hack << "ControlToIdle done" << std::endl;
+		}
+		catch (InterruptedException) {
+			lyz_log_hack << "LYZ: " << __LINE__ << ": Uncaught Interjection in top loop" << std::endl;
+			lyz_log_hack.flush();
+			try {
+				Process_InterruptToControl();
+				lyz_log_hack << "IntToControl from unhandled done" << std::endl;
+				Process_ControlToIdle();
+				lyz_log_hack << "ControlToIdle from unhandled done" << std::endl;
+			}
+			catch (InterruptedException) {
+				lyz_log_hack << "LYZ: " << __LINE__ << ": Uncuaght Interjection in interjection catch -- it's all screwed now." << std::endl;
+			}
+		}
 	}
 }
 
-bool MBusAnalyzer::AdvanceAllTo(U64 sample, bool interruptable) {
+void MBusAnalyzer::AdvanceAllTo(U64 sample) {
 	bool interrupted = false;
 
 	for (size_t i=0; i<mNodeCLKs.size(); i++) {
 		mNodeCLKs.at(i)->AdvanceToAbsPosition(sample);
 		if (mNodeDATs.at(i)->AdvanceToAbsPosition(sample) > 3) {
-			if (!interruptable) {
-				//AnalyzerHelpers::Assert("Unexpected Interrupt: The Analyzer isn't very good at handling Interrupts when they don't occur on clean 32-bit data boundaries. Things are probably garbage after here.");
-			}
+			// Note that the interrupt was seen, but it's still important to advance all the channels,
+			// otherwise, the next AdvanceAll will "detect" an interrupt on i+1'th node
 			interrupted = true;
 		}
 	}
 
-	return interrupted;
+	if (interrupted) {
+		throw interruptedException;
+	}
 }
 
 #include <stdio.h>
@@ -352,16 +386,24 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 		for (int i=0; i < 7; i++) {
 			// Latch Drive Bit N (Data is MSB, byte-granularity)
 			mLastNodeCLK->AdvanceToNextEdge();
-			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
-			if (interrupted)
+			try {
+				AdvanceAllTo(mLastNodeCLK->GetSampleNumber());
+			}
+			catch (InterruptedException) {
+				interrupted = true;
 				break;
+			}
 			data <<= 1;
 			data |= mLastNodeDAT->GetBitState() == BIT_HIGH;
 			// Advance to Drive Bit N+1
 			mLastNodeCLK->AdvanceToNextEdge();
-			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
-			if (interrupted)
+			try {
+				AdvanceAllTo(mLastNodeCLK->GetSampleNumber());
+			}
+			catch (InterruptedException) {
+				interrupted = true;
 				break;
+			}
 		}
 
 		if (!interrupted) {
@@ -376,7 +418,12 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 
 			// Advance to Drive Bit of next word; may interrupt
 			mLastNodeCLK->AdvanceToNextEdge();
-			interrupted = AdvanceAllTo( mLastNodeCLK->GetSampleNumber(), true );
+			try {
+				AdvanceAllTo(mLastNodeCLK->GetSampleNumber());
+			}
+			catch (InterruptedException) {
+				interrupted = true;
+			}
 		}
 
 		frame.mData1 = data;
