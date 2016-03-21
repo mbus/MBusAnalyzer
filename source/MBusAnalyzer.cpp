@@ -376,14 +376,16 @@ void MBusAnalyzer::Process_AddressToData() {
 
 void MBusAnalyzer::Process_DataToInterrupt() {
 	bool interrupted = false;
+	bool whole_byte = false;
 	do {
 		Frame frame;
 		frame.mFlags = 0;
 		frame.mStartingSampleInclusive = mLastNodeCLK->GetSampleNumber()+1;
 
 		U8 data = 0;
+		whole_byte = false;
 
-		for (int i=0; i < 7; i++) {
+		for (int i=0; i < 8; i++) {
 			// Latch Drive Bit N (Data is MSB, byte-granularity)
 			mLastNodeCLK->AdvanceToNextEdge();
 			try {
@@ -395,6 +397,16 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 			}
 			data <<= 1;
 			data |= mLastNodeDAT->GetBitState() == BIT_HIGH;
+
+			// Note the byte is complete here, if we're watching a downstream node, the interjection
+			// will trigger in the next advance (but not yet if we're watching an upstream node)
+			if (i == 7) {
+				whole_byte = true;
+			}
+
+			// Save current point in time in case next transition is interrupt
+			frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
+
 			// Advance to Drive Bit N+1
 			mLastNodeCLK->AdvanceToNextEdge();
 			try {
@@ -406,31 +418,13 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 			}
 		}
 
-		if (!interrupted) {
-			// Latch Drive Bit 8
-			mLastNodeCLK->AdvanceToNextEdge();
-			AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
-			data <<= 1;
-			data |= mLastNodeDAT->GetBitState() == BIT_HIGH;
-
-			// Save current point in time in case next transition is interrupt
-			frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
-
-			// Advance to Drive Bit of next word; may interrupt
-			mLastNodeCLK->AdvanceToNextEdge();
-			try {
-				AdvanceAllTo(mLastNodeCLK->GetSampleNumber());
-			}
-			catch (InterruptedException) {
-				interrupted = true;
-			}
-		}
-
 		frame.mData1 = data;
 		frame.mType = FrameTypeData;
 		if (interrupted) {
-			mResults->AddFrame(frame);
-			mResults->CommitResults();
+			if (whole_byte) {
+				mResults->AddFrame(frame);
+				mResults->CommitResults();
+			}
 
 			frame.mStartingSampleInclusive = frame.mEndingSampleInclusive + 1;
 			frame.mType = FrameTypeInterrupt;
