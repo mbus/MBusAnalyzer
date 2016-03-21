@@ -10,7 +10,7 @@ enum MBusFrameType {
 	FrameTypeReservedBit,
 	FrameTypeAddress,
 	FrameTypeData,
-	FrameTypeInterrupt,
+	FrameTypeInterjection,
 	FrameTypeControlBit0,
 	FrameTypeControlBit1,
 };

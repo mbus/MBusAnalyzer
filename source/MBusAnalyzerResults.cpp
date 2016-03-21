@@ -130,10 +130,10 @@ void MBusAnalyzerResults::GenerateBubbleText( U64 frame_index, Channel& channel,
 				outfile << "Data " << number_str << std::endl;
 			}
 			break;
-		case FrameTypeInterrupt:
+		case FrameTypeInterjection:
 			AddResultString("I");
-			AddResultString("Int");
-			AddResultString("Interrupt");
+			AddResultString("Inj");
+			AddResultString("Interjection");
 			break;
 		case FrameTypeControlBit0:
 			mCB0 = data;
@@ -227,7 +227,7 @@ void MBusAnalyzerResults::GenerateCSVFile( const char* file, DisplayBase display
 				break;
 				}
 
-			case FrameTypeInterrupt:
+			case FrameTypeInterjection:
 				file_stream << std::endl;
 		};
 

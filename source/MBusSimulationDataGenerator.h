@@ -35,8 +35,8 @@ private:
 	void CreateMBusArbitration(std::vector< bool > normal, std::vector< bool > priority, std::vector< bool > wakeup);
 	void CreateMBusData(int sender, U32 address, U8 num_bytes, U8 data[]);
 	void CreateMBusBit(int sender, BitState bit);
-	void CreateMBusInterrupt(int interrupter);
-	void CreateMBusControl(int interrupter, BitState cb0, int target, BitState cb1);
+	void CreateMBusInterjection(int interjector);
+	void CreateMBusControl(int interjector, BitState cb0, int target, BitState cb1);
 	void PropogationDelay();
 
 	ClockGenerator mClockGenerator;

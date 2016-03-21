@@ -6,11 +6,11 @@
 #include <iostream>
 #include <fstream>
 
-class InterruptedException : public std::exception {
+class InterjectedException : public std::exception {
 	virtual const char* what() const throw () {
-		return "Interrupt Sequence Occurred";
+		return "Interjection Sequence Occurred";
 	}
-} interruptedException;
+} interjectedException;
 
 MBusAnalyzer::MBusAnalyzer()
 :	Analyzer(),
@@ -93,23 +93,23 @@ void MBusAnalyzer::WorkerThread()
 			lyz_log_hack << "SkipReservedBit done" << std::endl;
 			Process_AddressToData();
 			lyz_log_hack << "AddrToData done" << std::endl;
-			Process_DataToInterrupt();
+			Process_DataToInterjection();
 			lyz_log_hack << "DataToInt done" << std::endl;
-			Process_InterruptToControl();
+			Process_InterjectionToControl();
 			lyz_log_hack << "IntToControl done" << std::endl;
 			Process_ControlToIdle();
 			lyz_log_hack << "ControlToIdle done" << std::endl;
 		}
-		catch (InterruptedException) {
+		catch (InterjectedException) {
 			lyz_log_hack << "LYZ: " << __LINE__ << ": Uncaught Interjection in top loop" << std::endl;
 			lyz_log_hack.flush();
 			try {
-				Process_InterruptToControl();
+				Process_InterjectionToControl();
 				lyz_log_hack << "IntToControl from unhandled done" << std::endl;
 				Process_ControlToIdle();
 				lyz_log_hack << "ControlToIdle from unhandled done" << std::endl;
 			}
-			catch (InterruptedException) {
+			catch (InterjectedException) {
 				lyz_log_hack << "LYZ: " << __LINE__ << ": Uncuaght Interjection in interjection catch -- it's all screwed now." << std::endl;
 			}
 		}
@@ -117,19 +117,19 @@ void MBusAnalyzer::WorkerThread()
 }
 
 void MBusAnalyzer::AdvanceAllTo(U64 sample) {
-	bool interrupted = false;
+	bool interjected = false;
 
 	for (size_t i=0; i<mNodeCLKs.size(); i++) {
 		mNodeCLKs.at(i)->AdvanceToAbsPosition(sample);
 		if (mNodeDATs.at(i)->AdvanceToAbsPosition(sample) > 3) {
-			// Note that the interrupt was seen, but it's still important to advance all the channels,
-			// otherwise, the next AdvanceAll will "detect" an interrupt on i+1'th node
-			interrupted = true;
+			// Note that the interjection was seen, but it's still important to advance all the channels,
+			// otherwise, the next AdvanceAll will "detect" an interjection on i+1'th node
+			interjected = true;
 		}
 	}
 
-	if (interrupted) {
-		throw interruptedException;
+	if (interjected) {
+		throw interjectedException;
 	}
 }
 
@@ -317,7 +317,7 @@ void MBusAnalyzer::Process_SkipReservedBit() {
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );
 
 	if (mLastNodeCLK->GetSampleOfNextEdge() > mLastNodeDAT->GetSampleOfNextEdge()) {
-		// An Interrupt occurred
+		// An Interjection occurred
 		AdvanceAllTo( mLastNodeDAT->GetSampleOfNextEdge() - 1 );
 	} else {
 		// Normal operation (clk before data)
@@ -332,7 +332,6 @@ void MBusAnalyzer::Process_SkipReservedBit() {
 	ReportProgress( mLastNodeCLK->GetSampleNumber() );
 }
 
-// FIXME: This function also needs to handle being interrupted correctly
 void MBusAnalyzer::Process_AddressToData() {
 	Frame frame;
 	frame.mFlags = 0;
@@ -374,8 +373,8 @@ void MBusAnalyzer::Process_AddressToData() {
 	ReportProgress( mLastNodeCLK->GetSampleNumber() );
 }
 
-void MBusAnalyzer::Process_DataToInterrupt() {
-	bool interrupted = false;
+void MBusAnalyzer::Process_DataToInterjection() {
+	bool interjected = false;
 	bool whole_byte = false;
 	do {
 		Frame frame;
@@ -391,8 +390,8 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 			try {
 				AdvanceAllTo(mLastNodeCLK->GetSampleNumber());
 			}
-			catch (InterruptedException) {
-				interrupted = true;
+			catch (InterjectedException) {
+				interjected = true;
 				break;
 			}
 			data <<= 1;
@@ -404,7 +403,7 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 				whole_byte = true;
 			}
 
-			// Save current point in time in case next transition is interrupt
+			// Save current point in time in case next transition interjects
 			frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
 
 			// Advance to Drive Bit N+1
@@ -412,39 +411,39 @@ void MBusAnalyzer::Process_DataToInterrupt() {
 			try {
 				AdvanceAllTo(mLastNodeCLK->GetSampleNumber());
 			}
-			catch (InterruptedException) {
-				interrupted = true;
+			catch (InterjectedException) {
+				interjected = true;
 				break;
 			}
 		}
 
 		frame.mData1 = data;
 		frame.mType = FrameTypeData;
-		if (interrupted) {
+		if (interjected) {
 			if (whole_byte) {
 				mResults->AddFrame(frame);
 				mResults->CommitResults();
 			}
 
 			frame.mStartingSampleInclusive = frame.mEndingSampleInclusive + 1;
-			frame.mType = FrameTypeInterrupt;
+			frame.mType = FrameTypeInterjection;
 		}
 
 		frame.mEndingSampleInclusive = mLastNodeCLK->GetSampleNumber();
 		mResults->AddFrame(frame);
 		mResults->CommitResults();
 		ReportProgress( mLastNodeCLK->GetSampleNumber() );
-	} while (!interrupted);
+	} while (!interjected);
 }
 
-void MBusAnalyzer::Process_InterruptToControl() {
+void MBusAnalyzer::Process_InterjectionToControl() {
 	// nop; this is currently subsumed by the DataToInterrupt; FIXME
 }
 
 void MBusAnalyzer::Process_ControlToIdle() {
 	// This currently picks up having processed the drive Begin Control CLK edge
 	//
-	// Silently consume period that should eventually be marked as part of Interrupt:
+	// Silently consume period that should eventually be marked as part of interjection:
 	// Latch Begin Control:
 	mLastNodeCLK->AdvanceToNextEdge();
 	AdvanceAllTo( mLastNodeCLK->GetSampleNumber() );

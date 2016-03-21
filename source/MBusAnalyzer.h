@@ -41,8 +41,8 @@ private: // analysis helpers:
 	void Process_PriorityArbitrationToAddress();
 	void Process_SkipReservedBit();
 	void Process_AddressToData();
-	void Process_DataToInterrupt();
-	void Process_InterruptToControl();
+	void Process_DataToInterjection();
+	void Process_InterjectionToControl();
 	void Process_ControlToIdle();
 
 	void AdvanceAllTo(U64 sample);

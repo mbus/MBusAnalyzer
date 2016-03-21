@@ -124,11 +124,11 @@ void MBusSimulationDataGenerator::CreateMBusWakeup(int sender) {
 		}
 	}
 
-	CreateMBusInterrupt(0); // Through Interrupt Asserted edge inclusive
+	CreateMBusInterjection(0); // Through Interjection Asserted edge inclusive
 	for (int i=0; i<mNodeCount; i++) {
 		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH) {
-			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusInterrupt did not exit with CLK's high?" << std::endl;
-			AnalyzerHelpers::Assert("CreateMBusInterrupt did not exit with CLK's high?");
+			mSettings->log_hack << "SIM: " << __LINE__ << ": CreateMBusInterjection did not exit with CLK's high?" << std::endl;
+			AnalyzerHelpers::Assert("CreateMBusInterjection did not exit with CLK's high?");
 		}
 	}
 	CreateMBusControl(0, BIT_LOW, 0, BIT_LOW); // Through Begin Idle latch inclusive
@@ -191,10 +191,10 @@ void MBusSimulationDataGenerator::CreateMBusTransaction(int sender, U32 address,
 	for (int i=0; i<mNodeCount; i++)
 		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
 			AnalyzerHelpers::Assert("CreateMBusData did not exit with CLK's high?");
-	CreateMBusInterrupt(sender); // Through Interrupt Asserted edge inclusive
+	CreateMBusInterjection(sender); // Through Interjection Asserted edge inclusive
 	for (int i=0; i<mNodeCount; i++)
 		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
-			AnalyzerHelpers::Assert("CreateMBusInterrupt did not exit with CLK's high?");
+			AnalyzerHelpers::Assert("CreateMBusInterjection did not exit with CLK's high?");
 	CreateMBusControl(sender, BIT_HIGH, address & 0xf, (acked) ? BIT_LOW : BIT_HIGH); // Through Begin Idle latch inclusive
 	for (int i=0; i<mNodeCount; i++)
 		if (mNodeCLKSimulationDatas.at(i)->GetCurrentBitState() != BIT_HIGH)
@@ -428,32 +428,32 @@ void MBusSimulationDataGenerator::CreateMBusData(int sender, U32 address, U8 num
 	}
 }
 
-void MBusSimulationDataGenerator::CreateMBusInterrupt(int interrupter) {
+void MBusSimulationDataGenerator::CreateMBusInterjection(int interjector) {
 	// Generate blocked CLK pulses
 	//
 	// Drive Req Int
-	for (int i=0; i<interrupter; i++) {
+	for (int i=0; i<interjector; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
 	// Latch Req Int
-	for (int i=0; i<interrupter; i++) {
+	for (int i=0; i<interjector; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
 	// Drive Beg Int
-	for (int i=0; i<interrupter; i++) {
+	for (int i=0; i<interjector; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
 	// Latch Beg Int
-	for (int i=0; i<interrupter; i++) {
+	for (int i=0; i<interjector; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
 		PropogationDelay();
 	}
@@ -464,10 +464,10 @@ void MBusSimulationDataGenerator::CreateMBusInterrupt(int interrupter) {
 	}
 	mMBusSimulationChannels.AdvanceAll( mClockGenerator.AdvanceByHalfPeriod(1) );
 
-	// Generate Interrupt Pulses
+	// Generate Interjection Pulses
 	//
-	const int MBUS_NUM_INTERRUPT_PULSES = 3;
-	for (int p=0; p<MBUS_NUM_INTERRUPT_PULSES*2; p++) {
+	const int MBUS_NUM_INTERJECTION_PULSES = 3;
+	for (int p=0; p<MBUS_NUM_INTERJECTION_PULSES*2; p++) {
 		for (int i=0; i<mNodeCount; i++) {
 			mNodeDATSimulationDatas.at(i)->Transition();
 			PropogationDelay();
@@ -476,7 +476,7 @@ void MBusSimulationDataGenerator::CreateMBusInterrupt(int interrupter) {
 	}
 }
 
-void MBusSimulationDataGenerator::CreateMBusControl(int interrupter, BitState cb0, int target, BitState cb1) {
+void MBusSimulationDataGenerator::CreateMBusControl(int interjector, BitState cb0, int target, BitState cb1) {
 	// "Drive" Begin Control
 	for (int i=0; i<mNodeCount; i++) {
 		mNodeCLKSimulationDatas.at(i)->Transition();
@@ -497,7 +497,7 @@ void MBusSimulationDataGenerator::CreateMBusControl(int interrupter, BitState cb
 		PropogationDelay();
 	}
 	// Drive CB0 (DAT)
-	for (int j=interrupter; j < interrupter + mNodeCount; j++) {
+	for (int j=interjector; j < interjector + mNodeCount; j++) {
 		int k = j % mNodeCount;
 		mNodeDATSimulationDatas.at(k)->TransitionIfNeeded( cb0 );
 	}
