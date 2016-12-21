@@ -3,16 +3,30 @@ MBusAnalyzer
 
 This is the source for an Analyzer Module for the Saleae logic analyzer for MBus.
 
-This is a very rough first draft, but basic things seem to be working ish.
 
-Building
---------
+Usage
+-----
 
-To build you must first download the [Saleae SDK](http://community.saleae.com/AnalyzerSdk).
-Checkout this repository inside the SDK folder, cd into the checked out module
-folder and run `python build_analyzer.py` (Note: There is also a
-`build_analyzer.py` in the SDK directory, do not run that).
+This library ships with a built version of the analzyer module. For most users,
+this should be all you need.
 
-If you're building on a 64-bit machine, you may have to go into the SDK/lib
-folder and rename some things so saleae grabs the right library. Yes, I know
-there are better ways to handle this, take it up with saleae.
+  1. Open Logic. Go to Options (top right), Preferences, Developer tab
+  2. Set the search path for analyzer plugins to `release/[version]/[platform]/`
+  3. Restart Logic software
+  4. Under the Analyzers section, click the `+` icon, choose `Show more analyzers` and select MBus
+
+
+For Saleae Plug-in Developers
+-----------------------------
+
+This library includes a git [submodule](https://github.com/blog/2104-working-with-submodules),
+which links the [Saleae SDK](http://community.saleae.com/AnalyzerSdk). After cloning this
+repository, verify that the AnalyzerSDK folder has files in `include` and `lib`, otherwise run
+
+    git submodule update --init --recursive
+
+On OS X / Linux, you should simply be able to run `python build_analyzer.py`. In Windows
+environments, open the Visual Studio solution in `vs/MBusAnalyzer.sln`.
+
+Things should be set up to build for a 64-bit enivonrment by default, though sometimes the
+Visual Studio build environment seems to point back to the 32-bit version.
