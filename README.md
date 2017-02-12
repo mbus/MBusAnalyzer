@@ -30,3 +30,9 @@ environments, open the Visual Studio solution in `vs/MBusAnalyzer.sln`.
 
 Things should be set up to build for a 64-bit enivonrment by default, though sometimes the
 Visual Studio build environment seems to point back to the 32-bit version.
+
+### Debugging
+
+According to Saeleae, debugging on Windows is a tricky proposition, so use gdb/lldb on Linux/Mac.
+
+Assuming Logic is already open, simply run `process attach --name Logic` to attach the debugger.
