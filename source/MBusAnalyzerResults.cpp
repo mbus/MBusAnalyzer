@@ -187,7 +187,8 @@ void MBusAnalyzerResults::GenerateCSVFile( const char* file, DisplayBase display
 	bool any_frame = false;
 	bool new_frame = true;
 	U64 num_frames = GetNumFrames();
-	for( U32 i=0; i < num_frames; i++ )
+	U32 i = 0;
+	for( ; i < num_frames; i++ )
 	{
 		Frame frame = GetFrame( i );
 		U32 data = frame.mData1;
@@ -238,6 +239,7 @@ void MBusAnalyzerResults::GenerateCSVFile( const char* file, DisplayBase display
 		}
 	}
 
+	UpdateExportProgressAndCheckForCancel( i, num_frames );
 	file_stream.close();
 }
 
@@ -249,7 +251,8 @@ void MBusAnalyzerResults::GenerateOutFile(const char* file, DisplayBase display_
 	bool any_frame = false;
 	bool new_frame = true;
 	U64 num_frames = GetNumFrames();
-	for (U32 i = 0; i < num_frames; i++)
+	U32 i = 0;
+	for ( ; i < num_frames; i++)
 	{
 		Frame frame = GetFrame(i);
 		U32 data = frame.mData1;
@@ -286,6 +289,7 @@ void MBusAnalyzerResults::GenerateOutFile(const char* file, DisplayBase display_
 		}
 	}
 
+	UpdateExportProgressAndCheckForCancel( i, num_frames );
 	file_stream.close();
 }
 
