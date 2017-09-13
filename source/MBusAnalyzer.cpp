@@ -526,12 +526,12 @@ U32 MBusAnalyzer::GetMinimumSampleRateHz()
 
 const char* MBusAnalyzer::GetAnalyzerName() const
 {
-	return "MBus (v0.3.0)";
+	return "MBus (v0.4.1)";
 }
 
 const char* GetAnalyzerName()
 {
-	return "MBus (v0.3.0)";
+	return "MBus (v0.4.1)";
 }
 
 Analyzer* CreateAnalyzer()
